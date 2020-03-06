@@ -1,0 +1,98 @@
+1. Tambahkan Signing Config di app/build.gradle (simpan storeFile dll pada env)
+
+    android {
+        ...
+        signingConfigs {
+                release {
+                    storeFile file(System.getenv("storeFile"))
+                    storePassword System.getenv("storePassword")
+                    keyAlias System.getenv("keyAlias")
+                    keyPassword System.getenv("keyPassword")
+                }
+        }
+        ...
+    }
+    
+2. Set Signing Config di buildTypes di app/build.gragle dalam android
+
+    android {
+        ...
+        buildTypes {
+                release {
+                    ...
+                    signingConfig signingConfigs.release
+                }
+            }
+        ...
+    }
+
+3. Seting VersionCode dan VersionName
+    - pindahkan setting versionCode dan versionName yang ada di app/build.gradle ke nama_project/build.gradle, ex :
+    
+    -> app/build.gradle
+    android {
+        ...
+        defaultConfig {
+            ...
+            versionCode rootProject.ext.versionCode
+            versionName rootProject.ext.versionName
+        }
+        ...
+    }
+    
+    -> nama_project/build.gradle
+    buildscript {
+        ext {
+            ...
+            versionCode=160010112
+            versionName="1.1.12"
+        }
+        ...
+    }
+    
+4. Setting Nexus di nama_project/build.gradle
+
+    -> tambah plugin maven di android/build.gradle
+    apply plugin: 'maven'
+
+    -> Tambahkan env
+    buildscript {
+        ext {
+            ...
+            pathApk=System.getenv("pathApk") ?: "pathApk"
+            nexusUser=System.getenv("NexusUser") ?: "NexusUser"
+            nexusPass=System.getenv("NexusPass") ?: "NexusPass"
+            artifactId=System.getenv("artifactId") ?: "artifactId"
+        }
+        ...
+    }
+    
+    -> Tambah Script buat archive dan upload
+    
+    buildscript {
+        ...
+    }
+    
+    artifacts {
+        archives file(pathApk)
+    }
+
+    uploadArchives {
+            repositories{
+                mavenDeployer {
+                    repository(url: "http://nexus.apps.playcourt.id/repository/${nama_tribe}") {
+                        authentication(userName: nexusUser, password: nexusPass)
+                    }
+                    def branchName = System.getenv("BRANCH_NAME")
+                    if (branchName == "release" || branchName == "master") {
+                        pom.version = versionName
+                    } else {
+                        pom.version = "1.0.0"
+                    }
+                    pom.artifactId = artifactId
+                    pom.groupId = "${nama_aplikasi}"
+                }
+            }
+    }
+    
+    
